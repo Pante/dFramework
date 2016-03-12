@@ -1,0 +1,66 @@
+#==========================================================================#
+# Copyright (C) 2016 PanteLegacy @ karusmc.com                             #
+#                                                                          #
+# This program is free software: you can redistribute it and/or modify     #
+# it under the terms of the GNU General Public License as published by     #
+# the Free Software Foundation, either version 3 of the License, or        #
+# (at your option) any later version.                                      #
+#                                                                          #
+# This program is distributed in the hope that it will be useful,          #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of           #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            #
+# GNU General Public License for more details.                             #
+#                                                                          #
+# You should have received a copy of the GNU General Public License        #
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.    #
+#                                                                          #
+#==========================================================================#
+
+##################################################
+# World script that detects when a server starts #
+##################################################
+Framework_Manager:
+  type: world
+  debug: false
+  events:
+    on server start:
+    - inject Framework_Core
+    - inject Framework_Modules
+    
+###############################################
+# Task script that creates and loads the core #
+###############################################
+Framework_Core:
+  type: task
+  script:
+  - if <server.has_file[/dFramework/config.yml]> {
+      - yaml create id:config
+      
+      - yaml id:config set options.enabled:true
+      - yaml id:config set options.auto-register:true
+  
+      - yaml savefile:/dFramework/config.yml id:config
+    }
+    else {
+      - yaml load:/dFramework/config.yml id:config
+    }
+    
+##################################################
+# Task script that creates and laods the modules #
+##################################################
+Framework_Modules:
+  type: task
+  script:
+  - if <yaml[config].read[options.auto-register]||false> {
+    - define scripts <server.list_scripts.filter[name.starts_with[Load_Module_]].substring[15]>
+    }
+    else {
+    - define scripts <server.list_scripts.filter[name.starts_with[Load_Module_]]substring[15].exclude[<yaml[config].list_keys[modules]>]>
+    }
+   
+  - foreach <def[scripts]> {
+    - if <yaml[config].contains[modules.<def[value]>.enabled].not> || <yaml[config].read[modules.<def[value]>.enabled]||false> {
+      - run Load_Module_<def[value]> instantly
+      }
+    }
+    

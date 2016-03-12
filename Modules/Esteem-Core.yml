@@ -1,0 +1,127 @@
+#==========================================================================#
+# Copyright (C) 2016 PanteLegacy @ karusmc.com                             #
+#                                                                          #
+# This program is free software: you can redistribute it and/or modify     #
+# it under the terms of the GNU General Public License as published by     #
+# the Free Software Foundation, either version 3 of the License, or        #
+# (at your option) any later version.                                      #
+#                                                                          #
+# This program is distributed in the hope that it will be useful,          #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of           #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            #
+# GNU General Public License for more details.                             #
+#                                                                          #
+# You should have received a copy of the GNU General Public License        #
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.    #
+#                                                                          #
+#==========================================================================#
+
+##################################################
+# Task script for initialising the esteem module #
+##################################################
+Load_Module_Esteem:
+  type: task
+  debug: false
+  script:
+  - if <yaml[config].contains[modules.esteem]||false> {
+    
+    - yaml id:config set "framework.modules.esteem.description:This module is used by the npcs do deteremine their response to a player"
+    - yaml id:config set framework.modules.esteem.enabled:true
+    - yaml id:config set framework.modules.esteem.files:../dFramework/NPC/esteem.yml
+    
+    - yaml id:config set esteem.bounds.min:-50
+    - yaml id:config set esteem.bounds.disliked:-25
+    - yaml id:config set esteem.bounds.default:0
+    - yaml id:config set esteem.bounds.liked:25
+    - yaml id:config set esteem.bounds.max:50
+    
+    - yaml id:config set esteem.response.polite:2
+    - yaml id:config set esteem.response.rude:-4
+    - yaml id:config set esteem.response.purchase:5
+    
+    - yaml savefile:../dFramework/config.yml id:config
+    
+    }
+########################################
+# Task script for setting the response #
+########################################
+Assign_Esteem:
+  type: task
+  debug: false
+  definitions: type|polite|rude|purchase
+  script:
+  - flag <npc> <def[type]>_polite::<def[polite].as_int||<yaml[esteem].read[esteem.response.polite]>>
+  - flag <npc> <def[type]>_rude:<def[polite].as_int||<yaml[esteem].read[esteem.response.rude]>>
+  - flag <npc> <def[type]>_purchase:<def[purchase].as_int||<yaml[esteem].read[esteem.response.purchase]>>
+
+#################################################
+# World script for handling a player joining in #
+#################################################
+Esteem_Assign_Player:
+  type: world
+  debug: false
+  events:
+    on player joins:
+    - if <player.has_flag[globalEsteem].not> {
+      - flag <player> globalEsteem:<yaml[esteem].read[esteem.bounds.default]>
+      - foreach <server.flag[groups]> {
+        - flag <player> <def[value]>:<server.flag[<def[value]>]>
+        }
+      - queue clear
+      }
+      
+      else if <player.flag[groups].size> != <server.flag[groups].size> {
+      - foreach <server.flag[groups].exclude[<player.flag[groups]>]> {
+        - flag <player> <def[value]>:->:<parse:<server.flag[<def[value]>]>>
+        }
+      - queue clear
+      }
+      
+###########################################################
+# Task script for modifying the esteem values of a player #
+###########################################################
+Esteem_Modify:
+  type: task
+  debug: false
+  definitions: global|group
+  script:
+  - flag <player> globalEsteem:+:<npc.flag[<def[global]>]>
+  - flag <player> <npc.flag[group]>:+:<def[group]>
+  
+  - if <player.flag[globalEsteem]> > <yaml[config].read[esteem.bounds.max]> {
+    - flag <player> globalEsteem:<yaml[config].read[esteem.bounds.max]>
+    }
+    else if <player.flag[globalEsteem]> < <yaml[esteem].read[esteem.bounds.max]> {
+    - flag <player> globalEsteem:<yaml[config].read[esteem.bounds.max]>
+    }
+    
+  - if <player.flag[<npc.flag[group]>]> > <yaml[esteem].read[esteem.bounds.max]> {
+    - flag <player> <npc.flag[group]>:<yaml[esteem].read[esteem.bounds.max]>
+    }
+    else if <player.flag[<npc.flag[group]>]> < <yaml[esteem].read[esteem.bounds.min]> {
+    - flag <player> <npc.flag[group]>:<yaml[esteem].read[esteem.bounds.min]>
+    }
+##################################################
+# Task script for handling how the npc responses #
+##################################################
+Esteem_Determine:
+  type: procedure
+  debug: false
+  script:
+  - define caculatedEsteem <player.flag[globalEsteem].add[<player.flag[<npc.flag[group]>].div[2]>
+  
+  - if <def[caculatedEsteem]> <= <yaml[esteem].read[esteem.bounds.disliked]> && <def[caculatedEsteem]> >= <yaml[esteem].read[esteem.bounds.min]> {
+    - determine "disliked"
+    }
+    else if <def[caculatedEsteem]> > <yaml[esteem].read[esteem.bounds.disliked]> && <def[caculatedEsteem]> < <yaml[esteem].read[esteem.bounds.liked]> {
+    - determine "neutral"
+    }
+    else if <def[caculatedEsteem]> >= <yaml[esteem].read[esteem.bounds.liked]> && <def[caculatedEsteem]> <= <yaml[esteem].read[esteem.bounds.max]> {
+    - determine "liked"
+    }
+    else {
+    - if <yaml.list.contains[logs]> {
+      - yaml id:logs "set:logs.unresolved:->:<player.name> has an unknown esteem level: <def[caculatedEsteem]>"
+      }
+    - determine cancelled
+    }

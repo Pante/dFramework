@@ -1,0 +1,56 @@
+#==========================================================================#
+# Copyright (C) 2016 PanteLegacy @ karusmc.com                             #
+#                                                                          #
+# This program is free software: you can redistribute it and/or modify     #
+# it under the terms of the GNU General Public License as published by     #
+# the Free Software Foundation, either version 3 of the License, or        #
+# (at your option) any later version.                                      #
+#                                                                          #
+# This program is distributed in the hope that it will be useful,          #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of           #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            #
+# GNU General Public License for more details.                             #
+#                                                                          #
+# You should have received a copy of the GNU General Public License        #
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.    #
+#                                                                          #
+#==========================================================================#
+
+################################################
+# Task script for initialsing the debug module #
+################################################
+Load_Module_Debug:
+  type: task
+  debug: false
+  script:
+  - if <yaml[config].contains[modules.debug].not||false> {
+    - yaml id:config set "modules.debug.description:This module is used in debugging the server"
+    - yaml id:config set modules.debug.files:li@plugins/dFramework/securitylog.log|../dFramework/logs.yml
+    - yaml id:config set modules.debug.enabled:true
+    - yaml savefile:/dFramework/config.yml id:config
+    }
+  
+  - if <server.has_file[/dFramework/logs.yml]> {
+      - yaml load:/dFramework/logs.yml id:logs
+    }
+    else {
+      - yaml create id:logs
+      - yaml id:logs set "unresolved:->:unresolved errors here"
+      - yaml id:logs set "resolved:->:resolved errors here"
+      - yaml id:logs set show-recent:3
+      - yaml savefile:/dFramework/logs.yml id:logs
+    }
+
+  
+######################################################
+# World script that that sends admins debug messages #
+######################################################
+Debug_Manager:
+  type: world
+  debug: false
+  events:
+    on player joins:
+    - wait 5t
+    - if <player.has_permission[denizen.debug.review]> && <player.has_flag[recieveReport]> {
+      - narrate format:Debug_Format "Potential logs pending review: <&c><yaml[logs].read[unresolved].size><&r><&c>."
+      }

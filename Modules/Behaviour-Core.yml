@@ -1,0 +1,121 @@
+#==========================================================================#
+# Copyright (C) 2016 PanteLegacy @ karusmc.com                             #
+#                                                                          #
+# This program is free software: you can redistribute it and/or modify     #
+# it under the terms of the GNU General Public License as published by     #
+# the Free Software Foundation, either version 3 of the License, or        #
+# (at your option) any later version.                                      #
+#                                                                          #
+# This program is distributed in the hope that it will be useful,          #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of           #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            #
+# GNU General Public License for more details.                             #
+#                                                                          #
+# You should have received a copy of the GNU General Public License        #
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.    #
+#                                                                          #
+#==========================================================================#
+
+####################################################
+# Task script for initalising the behaviour module #
+####################################################
+Load_Module_Behaviour:
+  type: task
+  debug: false
+  script:
+  - if <yaml[config].contains[modules.behaviour].not||false> {
+    - yaml id:config set modules.behaviour.description:This module requires the npcs module to work. Provides a library of scripts for behaviours.
+    - yaml id:config set modules.behaviour.enabled:true
+    - yaml id:config set modules.behaviour.files:->:null
+    
+    - yaml id:config set behaviour.chat:3
+    - yaml id:config set behaviour.click:5
+    - yaml id:config set behaviour.proximity:3
+    - yaml id:config set behaviour.lookclose:3
+    
+    - yaml id:config set behaviour.pauseVariable:0|20
+    - yaml id:config set behaviour.speed:0.9
+    
+    - yaml savefile:/dFramework/config.yml id:config
+    }
+    
+######################################################################
+# Task script for assigning triggers and lookclose states for an NPC #
+######################################################################
+Assign_Triggers:
+  type: task
+  debug: false
+  definitions: chat|click|proximity|lookclose
+  script:
+  - if <yaml.list.contains[npcs].not> {
+    - debug error "Module: Behaviour either could not be loaded or could not be found"
+    - queue clear
+    }
+  - trigger name:chat state:true range:<def[chat].as_int||<yaml[config].read[behaviour.chat]>>
+  - trigger name:click state:true range:<def[click].as_int||<yaml[config].read[npcs.behaviour.click]>>
+  - trigger name:proximity state:true range:<def[proximity].as_int||<yaml[config].read[npcs.[behaviour.proximity]>>
+  - lookclose <npc> state:true range:<def[lookclose].as_int||<yaml[config].read[npcs.behaviour.lookclose]>> realistic
+  - queue clear
+  
+################################################
+# Task script for assigning walk related flags #
+################################################
+Assign_Walk_Flags:
+  type: task
+  debug: false
+  definitions: min|max|speed
+  script:
+  - if <yaml.list.contains[config].not> {
+    - debug error "Module: Behaviour either could not be loaded or could not be found"
+    - queue clear
+    }
+  - flag <npc> walk
+  - flag <npc> pauseMin:<def[min].as_int||<yaml[config].read[behaviour.pauseVariable].get[1]>>
+  - flag <npc> pauseMax:<def[min].as_int||<yaml[config].read[behaviour.pauseVariable].get[2]>>
+  - flag <npc> speed:<def[min].as_int||<yaml[config].read[behaviour.speed]>>
+  
+###################################
+# Task script to make an NPC Walk #
+###################################
+Walk:
+  type: task
+  debug: false
+  script:
+  - flag <npc> walkQueue:<queue>
+  - while <npc.has_flag[walk]> {
+    - if <npc.location.chunk.is_loaded.not> {
+      - queue pause
+      }
+    - flag <npc> anchorPoint:<npc.anchor.list.random>
+    - ~walk <npc> <npc.anchor[<npc.flag[anchorPoint]>]> speed:<npc.flag[speed]> auto_range
+    - wait <util.random.int[<npc.flag[pauseMin]>].to[<npc.flag[pauseMax]>]>
+    }
+  - queue clear
+
+#########################################################
+# World script that re-runs walk scripts and hides NPCs #
+#########################################################
+Behaviour_Manager:
+  type: world
+  debug: false
+  events:
+    on server start:
+    - wait 1t
+    - foreach <server.list_npcs.filter[has_flag[walk]]> {
+      - run Walk npc:<def[value].as_npc>
+      }
+    - queue clear
+    
+    on chunk loads:
+    - wait 1t
+    - foreach <chunk.living_entities.filter[has_flag[walk]]> {
+      - if <def[value].as_npc.flag[walkQueue].state> == "paused" {
+        - queue <def[value].as_npc.flag[walkQueue].state> resume
+        }
+      }    
+      
+    on player joins:
+    - if <player.has_flag[debugVisibility]>
+    - foreach <server.list_npcs.filter[has_flag[hidden]]> {
+      - adjust <player> show_entity:<def[value]>
+      }

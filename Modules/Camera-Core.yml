@@ -1,0 +1,91 @@
+#==========================================================================#
+# Copyright (C) 2016 PanteLegacy @ karusmc.com                             #
+#                                                                          #
+# This program is free software: you can redistribute it and/or modify     #
+# it under the terms of the GNU General Public License as published by     #
+# the Free Software Foundation, either version 3 of the License, or        #
+# (at your option) any later version.                                      #
+#                                                                          #
+# This program is distributed in the hope that it will be useful,          #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of           #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            #
+# GNU General Public License for more details.                             #
+#                                                                          #
+# You should have received a copy of the GNU General Public License        #
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.    #
+#                                                                          #
+#==========================================================================#
+
+####################################################
+# Task script for intiialsing the cutscenes module #
+####################################################
+  type: task
+  debug: false
+  script:
+  - if <yaml[config].contains[modules.camera].not||false> {
+    
+    - yaml id:config set "modules.cutscenes.description:This module contains tools used to create cutscenes"
+    - yaml id:config set modules.cutscenes.enabled:false
+
+    - yaml savefile:/dFramework/config.yml id:config
+    }
+
+######################################################
+# Assignment script for assigning to a camera object #
+######################################################
+Camera_Assignment:
+  type: assignment
+  debug: false
+  actions:
+    on assignment:
+    - adjust <npc> name:"<&6>Camera<&r>"
+    - adjust <npc> gravity:false
+    - trigger name:click state:true radius:3
+    
+    - flag <npc> camera
+    - flag <npc> hidden:"This flags marks an NPC to be hidden."
+
+######################
+# Camera initialiser #
+######################
+Camera_Initialise:
+  type: task
+  debug: false
+  definitions: targetedPlayer|cameraMovable
+  script:
+  - define targetChunk <npc.location.chunk>
+  - if <def[targetChunk].is_loaded.not> {
+    - chunkload add <def[targetChunk]>
+    }
+    
+  - create <def[targetedCamera].as_npc> "Bob" save:cameraInstance
+  - assignment set script:Camera_Assignment
+  
+  - create silverfish "&6Movable&r" <npc.location> save:cameraInstanceMovable
+  - adjust <entry[cameraInstanceMovable].created_npc> gravity:false
+  - mount <entry[cameraInstance].created_npc>|<entry[cameraInstanceMovable].created_npc>
+  
+  - flag <player> inCutscene:li@<entry[cameraInstance].created_npc>|<entry[cameraInstanceMovable].created_npc>
+
+  - adjust <def[targetedPlayer> gamemode:spectator
+  
+  - adjust <server.list_online_players.exclude[<def[targetedPlayer]>]> hide_entity:<entry[cameraInstance].created_npc>
+  - adjust <server.list_online_players.exclude[<def[targetedPlayer]>]> hide_entity:<entry[cameraInstanceMovable].created_npc>
+  
+  - adjust <def[targetedPlayer]> spectate:<entry[cameraInstance].created_npc>
+
+#####################
+# Cutscene clean up #
+#####################
+Camera_Cleaup:
+  type: task
+  debug: false
+  definitions: targetedPlayer
+  script:
+  - adjust <def[targetedPlayer]> spectate:<def[targetedPlayer]>
+  - adjust <def[targetedPlayer]> gamemode:survival
+  
+  - remove <def[targetedPlayer].flag[inCutscene].get[1]>
+  - remove <def[targetedPlayer].flag[inCutscene].get[2]>
+    
+  - flag <def[targetedPlayer].as_player> inCutscene:!
