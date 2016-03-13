@@ -23,11 +23,8 @@ Load_Module_NPCS:
   type: task
   debug: false
   script:
-  - if <server.has_file[../dFramework/NPC/npcs.yml]> {
-    - debug error "File: dFramework/NPC/npcs.yml already exists"
-    - queue clear
+  - if <server.has_file[/dFramework/NPC/npcs.yml].not> {  
+    - yaml id:config set "modules.npcs.description:This is the base module for all NPC related modules."
+    - yaml id:config set modules.npcs.enabled:true
+    - yaml savefile:/dFramework/config.yml id:config
     }
-    
-  - yaml id:config set "framework.modules.npcs.description:This is the base module for all NPC related modules."
-  - yaml id:config set framework.modules.npcs.enabled:true
-  - yaml savefile:../dFramework/config.yml id:config

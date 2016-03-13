@@ -16,6 +16,7 @@
 #                                                                          #
 #==========================================================================#
 
+
 ##################################################
 # World script that detects when a server starts #
 ##################################################
@@ -24,20 +25,22 @@ Framework_Manager:
   debug: false
   events:
     on server start:
-    - inject Framework_Core
-    - inject Framework_Modules
-    
+    - inject Load_Core
+    - inject Load_Modules
+
+
 ###############################################
 # Task script that creates and loads the core #
 ###############################################
-Framework_Core:
+Load_Core:
   type: task
+  debug: false
   script:
   - if <server.has_file[/dFramework/config.yml]> {
       - yaml create id:config
       
-      - yaml id:config set options.enabled:true
-      - yaml id:config set options.auto-register:true
+      - yaml id:config set core.enabled:true
+      - yaml id:config set core.auto-register:true
   
       - yaml savefile:/dFramework/config.yml id:config
     }
@@ -45,22 +48,24 @@ Framework_Core:
       - yaml load:/dFramework/config.yml id:config
     }
     
+    
 ##################################################
 # Task script that creates and laods the modules #
 ##################################################
-Framework_Modules:
+Load_Modules:
   type: task
+  debug: false
   script:
-  - if <yaml[config].read[options.auto-register]||false> {
-    - define scripts <server.list_scripts.filter[name.starts_with[Load_Module_]].substring[15]>
+  - if <yaml[config].read[core.auto-register]||false> {
+    - define scripts <yaml[config].list_keys[modules]>
     }
     else {
-    - define scripts <server.list_scripts.filter[name.starts_with[Load_Module_]]substring[15].exclude[<yaml[config].list_keys[modules]>]>
-    }
-   
-  - foreach <def[scripts]> {
-    - if <yaml[config].contains[modules.<def[value]>.enabled].not> || <yaml[config].read[modules.<def[value]>.enabled]||false> {
-      - run Load_Module_<def[value]> instantly
-      }
+    - define scripts <server.list_scripts.filter[name.starts_with[Load_Module_]]substring[15]>
     }
     
+  - foreach <def[scripts]> {
+    - if <yaml[config].contains[modules.<def[value]>.enabled].not> || <yaml[config].read[modules.<def[value]>.enabled]||false> {
+        - run Load_Module_<def[value]> instantly
+        }
+    }
+  

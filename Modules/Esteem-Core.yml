@@ -25,9 +25,8 @@ Load_Module_Esteem:
   script:
   - if <yaml[config].contains[modules.esteem]||false> {
     
-    - yaml id:config set "framework.modules.esteem.description:This module is used by the npcs do deteremine their response to a player"
-    - yaml id:config set framework.modules.esteem.enabled:true
-    - yaml id:config set framework.modules.esteem.files:../dFramework/NPC/esteem.yml
+    - yaml id:config set "modules.esteem.description:This module is used by the npcs do deteremine their response to a player."
+    - yaml id:config set modules.esteem.enabled:true
     
     - yaml id:config set esteem.bounds.min:-50
     - yaml id:config set esteem.bounds.disliked:-25
@@ -39,7 +38,7 @@ Load_Module_Esteem:
     - yaml id:config set esteem.response.rude:-4
     - yaml id:config set esteem.response.purchase:5
     
-    - yaml savefile:../dFramework/config.yml id:config
+    - yaml savefile:/dFramework/config.yml id:config
     
     }
 ########################################
@@ -50,9 +49,9 @@ Assign_Esteem:
   debug: false
   definitions: type|polite|rude|purchase
   script:
-  - flag <npc> <def[type]>_polite::<def[polite].as_int||<yaml[esteem].read[esteem.response.polite]>>
-  - flag <npc> <def[type]>_rude:<def[polite].as_int||<yaml[esteem].read[esteem.response.rude]>>
-  - flag <npc> <def[type]>_purchase:<def[purchase].as_int||<yaml[esteem].read[esteem.response.purchase]>>
+  - flag <npc> <def[type]>_polite::<def[polite].as_int||<yaml[config].read[esteem.response.polite]>>
+  - flag <npc> <def[type]>_rude:<def[polite].as_int||<yaml[config].read[esteem.response.rude]>>
+  - flag <npc> <def[type]>_purchase:<def[purchase].as_int||<yaml[config].read[esteem.response.purchase]>>
 
 #################################################
 # World script for handling a player joining in #
@@ -63,7 +62,7 @@ Esteem_Assign_Player:
   events:
     on player joins:
     - if <player.has_flag[globalEsteem].not> {
-      - flag <player> globalEsteem:<yaml[esteem].read[esteem.bounds.default]>
+      - flag <player> globalEsteem:<yaml[config].read[esteem.bounds.default]>
       - foreach <server.flag[groups]> {
         - flag <player> <def[value]>:<server.flag[<def[value]>]>
         }
@@ -91,15 +90,15 @@ Esteem_Modify:
   - if <player.flag[globalEsteem]> > <yaml[config].read[esteem.bounds.max]> {
     - flag <player> globalEsteem:<yaml[config].read[esteem.bounds.max]>
     }
-    else if <player.flag[globalEsteem]> < <yaml[esteem].read[esteem.bounds.max]> {
+    else if <player.flag[globalEsteem]> < <yaml[config].read[esteem.bounds.max]> {
     - flag <player> globalEsteem:<yaml[config].read[esteem.bounds.max]>
     }
     
-  - if <player.flag[<npc.flag[group]>]> > <yaml[esteem].read[esteem.bounds.max]> {
-    - flag <player> <npc.flag[group]>:<yaml[esteem].read[esteem.bounds.max]>
+  - if <player.flag[<npc.flag[group]>]> > <yaml[config].read[esteem.bounds.max]> {
+    - flag <player> <npc.flag[group]>:<yaml[config].read[esteem.bounds.max]>
     }
-    else if <player.flag[<npc.flag[group]>]> < <yaml[esteem].read[esteem.bounds.min]> {
-    - flag <player> <npc.flag[group]>:<yaml[esteem].read[esteem.bounds.min]>
+    else if <player.flag[<npc.flag[group]>]> < <yaml[config].read[esteem.bounds.min]> {
+    - flag <player> <npc.flag[group]>:<yaml[config].read[esteem.bounds.min]>
     }
 ##################################################
 # Task script for handling how the npc responses #
@@ -110,18 +109,18 @@ Esteem_Determine:
   script:
   - define caculatedEsteem <player.flag[globalEsteem].add[<player.flag[<npc.flag[group]>].div[2]>
   
-  - if <def[caculatedEsteem]> <= <yaml[esteem].read[esteem.bounds.disliked]> && <def[caculatedEsteem]> >= <yaml[esteem].read[esteem.bounds.min]> {
+  - if <def[caculatedEsteem]> <= <yaml[config].read[esteem.bounds.disliked]> && <def[caculatedEsteem]> >= <yaml[config].read[esteem.bounds.min]> {
     - determine "disliked"
     }
-    else if <def[caculatedEsteem]> > <yaml[esteem].read[esteem.bounds.disliked]> && <def[caculatedEsteem]> < <yaml[esteem].read[esteem.bounds.liked]> {
+    else if <def[caculatedEsteem]> > <yaml[config].read[esteem.bounds.disliked]> && <def[caculatedEsteem]> < <yaml[config].read[esteem.bounds.liked]> {
     - determine "neutral"
     }
-    else if <def[caculatedEsteem]> >= <yaml[esteem].read[esteem.bounds.liked]> && <def[caculatedEsteem]> <= <yaml[esteem].read[esteem.bounds.max]> {
+    else if <def[caculatedEsteem]> >= <yaml[config].read[esteem.bounds.liked]> && <def[caculatedEsteem]> <= <yaml[config].read[esteem.bounds.max]> {
     - determine "liked"
     }
     else {
     - if <yaml.list.contains[logs]> {
-      - yaml id:logs "set:logs.unresolved:->:<player.name> has an unknown esteem level: <def[caculatedEsteem]>"
+      - yaml id:logs "set:logs.pending:->:<player.name> has an unknown esteem level: <def[caculatedEsteem]>"
       }
     - determine cancelled
     }

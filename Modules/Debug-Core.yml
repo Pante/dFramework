@@ -24,8 +24,7 @@ Load_Module_Debug:
   debug: false
   script:
   - if <yaml[config].contains[modules.debug].not||false> {
-    - yaml id:config set "modules.debug.description:This module is used in debugging the server"
-    - yaml id:config set modules.debug.files:li@plugins/dFramework/securitylog.log|../dFramework/logs.yml
+    - yaml id:config set "modules.debug.description:This module is used to debug the dFramework core & modules."
     - yaml id:config set modules.debug.enabled:true
     - yaml savefile:/dFramework/config.yml id:config
     }
@@ -35,9 +34,8 @@ Load_Module_Debug:
     }
     else {
       - yaml create id:logs
-      - yaml id:logs set "unresolved:->:unresolved errors here"
-      - yaml id:logs set "resolved:->:resolved errors here"
-      - yaml id:logs set show-recent:3
+      - yaml id:logs set "pending:->:Pending issues here"
+      - yaml id:logs set "resolved:->:Resolved issues here"
       - yaml savefile:/dFramework/logs.yml id:logs
     }
 
@@ -51,6 +49,6 @@ Debug_Manager:
   events:
     on player joins:
     - wait 5t
-    - if <player.has_permission[denizen.debug.review]> && <player.has_flag[recieveReport]> {
-      - narrate format:Debug_Format "Potential logs pending review: <&c><yaml[logs].read[unresolved].size><&r><&c>."
+    - if <player.has_permission[dframework.debug.review]> && <player.has_flag[reviewer]> {
+      - narrate format:Debug_Format "Pending issues: <&c><yaml[logs].read[pending].size><&r><&c>."
       }

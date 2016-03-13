@@ -24,7 +24,7 @@
   script:
   - if <yaml[config].contains[modules.camera].not||false> {
     
-    - yaml id:config set "modules.cutscenes.description:This module contains tools used to create cutscenes"
+    - yaml id:config set "modules.cutscenes.description:This module contains tools to create cutscenes."
     - yaml id:config set modules.cutscenes.enabled:false
 
     - yaml savefile:/dFramework/config.yml id:config
