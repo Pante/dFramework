@@ -1,0 +1,107 @@
+###################
+# Esteem-Commands #
+###################
+
+#########################################
+# Command for setting the esteem bounds #
+#########################################
+Esteem_Set_Bounds:
+  type: command
+  debug: false
+  name: Esteem_Bounds
+  description: Use this command to set the values of the esteem boundaries.
+  usage: /Esteem_Bounds <&lt>Min<&gt> <&lt>Disliked<&gt> <&lt>Default<&gt> <&lt>Liked<&gt> <&lt>Max<&gt>
+  permission: denizen.esteem.bounds
+  permission message: <&4>You do not have the permission required to use this command.<&r>
+  allowed help:
+  - determine <player.has_permission[<script.yaml_key[permission]>]||<context.server>>
+  script:
+  - if <yaml.list.contains[config].not> {
+    - narrate format:Module_Error ": config.yml could not be loaded."
+    - queue clear
+    }
+
+  - yaml id:config set esteem.bounds.min:<context.args.get[1].as_int||-50>
+  - yaml id:config set esteem.bounds.disliked:<context.args.get[2].as_int||-25>
+  - yaml id:config set esteem.bounds.default:<context.args.get[3].as_int||0>
+  - yaml id:config set esteem.bounds.liked:<context.args.get[4].as_int||25>
+  - yaml id:config set esteem.bounds.max:<context.args.get[5].as_int||50>
+  
+  - yaml savefile:/dFramework/config.yml
+  
+  - narrate format:Debug_Format "Esteem boundaries have been set."
+    
+###########################################################
+# Command script for viewing the response values of a NPC #
+###########################################################
+Esteem_View_Flags:
+  type: command
+  debug: false
+  name: Esteem_Flags
+  description: Use this command for viewing the flag values of the NPCs.
+  usage: /esteem_flags <&lt>NPC ID<&gt>
+  permission: denizen.esteem.flag
+  permission message: <&4>You do not have permission to use this command.<&r>
+  allowed help:
+  - determine <player.has_permission[<script.yaml_key[permission]>]||<context.server>>
+  tab complete:
+  - if <player.has_permission[<script.yaml_key[permission]>]||<context.server>> {
+    - determine "<server.list_npcs.parse[id].filter[starts_with[<context.args.last>]]||No such NPC>"
+    }
+  script:
+  - define targetedNPC <context.args.get[1]>
+  - if <yaml.list.contains[config].not> || <context.args.size> != 1 || <server.npc_is_valid[<def[targetedNPC]>].not> {
+    - narrate format:Invalid_Argument ""
+    - queue clear
+    }
+    
+  - narrate format:Debug_Format "Global flags: <def[targetedNPC].as_npc.list_flags.filter[starts_with[global_]].comma_separated||No values></n>Group values: <def[targetedNPC].as_npc.list_flags.filter[starts_with[global_]].comma_separated||No values>"
+  
+############################################################
+# Command for viewing your own and other player's commands #
+############################################################
+Esteem_Display:
+  type: command
+  debug: false
+  name: esteem
+  description: Use this command for viewing the esteem levels of a player
+  usage: /esteem <&lt>global/group name<&gt> (player)
+  permission: denizen.esteem.display
+  permission message: <&4>You do not have permission to use this command.<&r>
+  allowed help:
+  - determine <player.has_permission[<script.yaml_key[permission]>]||<context.server>>
+  tab complete:
+  - if <player.has_permission[<script.yaml_key[permission]>]||<context.server>> {
+    - determine <server.list_players.parse[name].filter[starts_with[<context.args.last>]]>
+    }
+  script:
+  - if <context.args.size> == 0 {
+    - narrate format:Debug_Format "Global esteem level: <player.flag[globalEsteem]>"
+    - queue clear
+    }
+  - choose "<context.args.get[1]>":
+    - case "global":
+      - if <context.args.size> == 1 {
+        - narrate format:Debug_Format "Global esteem level: <player.flag[globalEsteem]>"
+        - queue clear
+        }
+      
+        else if <server.player_is_valid[<context.args.get[2]>]> {
+        - narrate format:Debug_Format "<context.args.get[2]>'s global esteem: <context.args.get[2].as_player.flag[globalEsteem]>"
+        - queue clear
+        }
+        
+    - default:
+      - if <server.flag[groups].contains[<context.args.get[1]>].not> {
+        - narrate format:Invalid_Argument " "
+        }
+      - if <context.args.size> == 1 {
+        - narrate format:Debug_Format "Your <context.args.get[1]> esteem: <player.flag[<context.args.get[1]>]||Invalid esteem>""
+        - queue clear
+        }
+        
+        else if <server.player_is_valid[<context.args.get[2]>]> {
+        - narrate format:Debug_Format "<context.args.get[2]>'s <context.args.get[1]> esteem: <player.flag[<context.args.get[1]>]||Invalid esteem>"
+        - queue clear
+        }
+

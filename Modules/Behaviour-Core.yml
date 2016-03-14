@@ -24,9 +24,9 @@ Load_Module_Behaviour:
   debug: false
   script:
   - if <yaml[config].contains[modules.behaviour].not||false> {
-    - yaml id:config set modules.behaviour.description:This module requires the npcs module to work. Provides a library of scripts for behaviours.
+  
+    - yaml id:config set "modules.behaviour.description:This module requires the npcs module to work. Provides a library of scripts for behaviours."
     - yaml id:config set modules.behaviour.enabled:true
-    - yaml id:config set modules.behaviour.files:->:null
     
     - yaml id:config set behaviour.chat:3
     - yaml id:config set behaviour.click:5
@@ -37,6 +37,7 @@ Load_Module_Behaviour:
     - yaml id:config set behaviour.speed:0.9
     
     - yaml savefile:/dFramework/config.yml id:config
+    
     }
     
 ######################################################################

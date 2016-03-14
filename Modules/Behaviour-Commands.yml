@@ -1,0 +1,68 @@
+###################################
+# File for the Behaviour Commands #
+###################################
+
+############################################################
+# Command script for manually assigning a trigger on a npc #
+############################################################
+Assign_Trigger_Command:
+  type: command
+  debug: false
+  name: trigger
+  usage: /trigger <&lt>NPC<&gt> (Chat radius) (Click radius) (Proximity radius) (Lookclose)
+  description: USe this command to view and modify a NPC's trigger radius
+  permission: denizen.behaviour.trigger
+  permission message: <&4>You do not have permission to use this command.<&r>
+  allowed help:
+  - determine <player.has_permission[<script.yaml_key[permission]>]>
+  tab complete:
+  - if <player.has_permission[<script.yaml_key[permission]>]> {
+    - determine <server.list_npcs.parse[id].filter[starts_with[<context.args.last>]]>
+    }
+  script:
+  - if <context.args.size> != 5 || <server.npc_is_valid[<context.args.get[1]>].not> {
+    - narrate format:Invalid_Argument ""
+    - queue clear
+    }
+    
+  - if <yaml.list.contains[npcs].not> {
+    - narrate format:Module_Error ": NPCs could not be found or was not loaded"
+    - queue clear
+    }
+  - trigger name:chat state:true range:<context.args.get[2]||<yaml[config].read[behaviour.chat]>||0> npc:<context.args.get[1]>
+  - trigger name:click state:true range:<context.args.get[3]||<yaml[config].read[behaviour.click]||0>> npc:<context.args.get[1]>
+  - trigger name:proximity state:true range:<context.args.get[4]||<yaml[config].read[behaviour.proximity]||0>> npc:<context.args.get[1]>
+  - lookclose <npc> state:true range:<context.args.get[5]||<yaml[config].read[behaviour.lookclose]||0>> realistic npc:<context.args.get[1]>
+  - narrate format:Debug_Format "<context.args.get[1]>'s trigger has been set."
+  
+######################################################################
+# Command script for manually assignign walk related flags to an NPC #
+######################################################################
+Assign_Walk_Flags_Command:
+  type: command
+  debug: false
+  name: WalkFlags
+  description: Use this command to change a NPC's Walk pause
+  usage: /WalkFlags (NPC ID)(Min pause) (Max pause)(Walk speed)
+  permission: denizen.behaviour.walkflags
+  permission message: You do not have the permission required to use this command.
+  allowed help:
+  - determine <player.has_permission[<script.has_key[permission]>]||<context.server>>
+  tab complete:
+  - if <player.has_permission[<script.has_key[permission]>]> {
+    - determine <server.list_npcs.parse[id].filter[starts_with[<context.args.last]]>
+    }
+  script:
+  - if <context.args.size> != 4 || <server.npc_is_valid[<context.args.get[1]>].not> {
+    - narrate format:Invalid_Argument ""
+    - queue clear
+    }
+    
+  - if <yaml.list.contains[npcs].not> {
+    - narrate format:Module_Error ": NPCs could not be found or was not loaded"
+    - queue clear
+    }
+    
+  - flag <context.args.get[1]> pauseMin:<context.args.get[2]||<yaml[config].read[behaviour.pauseVariable].get[1]>>
+  - flag <context.args.get[2]> pauseMax:<context.args.get[3]||<yaml[config].read[behaviour.pauseVariable].get[2]>>
+  - flag <context.args.get[4]> speed:<context.args.get[4]||<yaml[config].read[behaviour.speed]>>

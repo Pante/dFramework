@@ -1,0 +1,117 @@
+#==========================================================================#
+# Copyright (C) 2016 PanteLegacy @ karusmc.com                             #
+#                                                                          #
+# This program is free software: you can redistribute it and/or modify     #
+# it under the terms of the GNU General Public License as published by     #
+# the Free Software Foundation, either version 3 of the License, or        #
+# (at your option) any later version.                                      #
+#                                                                          #
+# This program is distributed in the hope that it will be useful,          #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of           #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            #
+# GNU General Public License for more details.                             #
+#                                                                          #
+# You should have received a copy of the GNU General Public License        #
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.    #
+#                                                                          #
+#==========================================================================#
+
+#############################################################
+# Main command script which calls all the other subcommands #
+#############################################################
+Framework_Command:
+  type: task
+  debug: false
+  name: dFramework
+  usage: /dFramework
+  description: This is the base command for all dFramework commands
+  permission: dframework.command
+  permission message: <&4>You do not have permission to use this command.<&r>
+  allowed help:
+  - determine <player.has_permission[<script.yaml_key[permission]]>]||<context.server>>
+  tab complete:
+  - if <player.has_permission[<script.yaml_key[permission]>]||<context.server>> && <yaml.list.contains[config]> {
+    - determine "<yaml[config].list_keys[framework.modules].filter[starts_with[<context.args.last>]]||No modules detected>"
+    }
+  script:
+  - if <context.args.get[1]> == null {
+    - inject Invalid_Handler
+    }
+  
+  - choose "<context.args.get[1]>":
+  
+    - case "core":
+      - inject Core_Command
+    
+    - case "modules":
+      - if 
+      
+
+##############################################
+# Task script for handling invalid arguments #
+##############################################
+Invalid_Handler:
+  type: task
+  debug: false
+  script:
+  - narrate format:Invalid_Number " "
+  - inject Help_Command
+  - queue clear
+
+
+###################################################
+# Task script to handle configuration of the core #
+###################################################
+Core_Command:
+  type: task
+  debug: false
+  script:
+  - if <context.args.get[2]> == null> || <context.args.get[3]> == null {
+    - inject Invalid_Handler
+    }
+  - if <yaml[config].list_keys[options].contains[<context.args.get[2]>].not> || ( <context.args.get[4]> != "true" && <context.args.get[3]> != "false" ) {
+    - narrate format:Invalid_Argument ""
+    - queue clear
+    }
+    
+  - yaml id:config set options.<context.args.get[2]>:<context.args.get[3]>
+  - yaml savefile:/dFramework/config.yml id:config
+  
+  - narrate format:Debug_Format "<context.args.get[2]> set to: <context.args.get[3]>"
+  - queue clear
+  
+###################################################
+# Task script to handle configuration of the core #
+###################################################
+Modules_Command:
+  type: task
+  debug: false
+  script:
+  - if <context.args.get[2]> == "list" {
+    - narrate format:Debug_Format "Modules: <yaml.list.comma_separated>"
+    - queue clear
+    }
+  
+  - if <context.args.size> == null || "<server.list_scripts.contains[s@Load_Module_<context.args.get[1]>].not>" {
+    - narrate format:Module_Error ": Module could not be found."
+    - queue clear
+    }
+    
+  - choose "<context.args.get[2]>":
+    - case "enable":
+      - yaml id:config set framework.modules.<context.argsget[3]>.enabled:true
+      - yaml savefile:/dFramework/config.yml id:config
+      - narrate format:Debug_Format "Module: <context.args.get[3]> has been enabled"
+      
+    - case "disable":
+      - yaml id:config set framework.modules.<context.args.get[3]>.enabled:false
+      - yaml savefile:../dFramework/config.yml id:config
+      - narrate format:Debug_Format "Module: <context.args.get[3]> has been disabled"
+  
+    - case "register":
+      - run Load_Module_<context.args.get[3]> instantly
+      - narrate format:Debug_Format "Registering module: <context.args.get[3]>"
+      
+    - default:
+      - narrate format:Invalid_Argument " "
+      - queue clear

@@ -28,7 +28,6 @@ Framework_Manager:
     - inject Load_Core
     - inject Load_Modules
 
-
 ###############################################
 # Task script that creates and loads the core #
 ###############################################
@@ -48,7 +47,6 @@ Load_Core:
       - yaml load:/dFramework/config.yml id:config
     }
     
-    
 ##################################################
 # Task script that creates and laods the modules #
 ##################################################
@@ -65,7 +63,7 @@ Load_Modules:
     
   - foreach <def[scripts]> {
     - if <yaml[config].contains[modules.<def[value]>.enabled].not> || <yaml[config].read[modules.<def[value]>.enabled]||false> {
-        - run Load_Module_<def[value]> instantly
-        }
+      - run Load_Module_<def[value]> instantly
+      }
     }
   

@@ -1,0 +1,201 @@
+###########################
+# File for debug commands #
+###########################
+
+###########################################################
+# Command for reviewing the the potential errors manually #
+###########################################################
+Debug_Error_Review:
+  type: command
+  debug: false
+  name: Debug_Error
+  usage: /Debug_Error <&lt>view/resolve/clear<&gt> <&lt>Error number<&gt> <&lt>Error number<&gt>
+  description: Use this command to review the errors
+  permission: denizen.debug.review
+  permission message: <&4>You do not have permission to use this command.<&r>
+  allowed help:
+  - determine <player.has_permission[<script.yaml_key[permission]>]||<context.server>>
+  tab complete:
+  - if <player.has_permission[<script.yaml_key[permission]>]||<context.server>> {
+    - determine <li@view|resolve|clear.filter[starts_with[<context.args.last]>]]>
+    }
+  script:
+  - if <yaml.list.contains[logs].not> {
+    - narrate format:Module_Error ": file could not be found or loaded"
+    - queue clear
+    }
+     
+  - define safeArg2 <context.args.get[2].as_int||1>
+  - define safeArg3 <context.args.get[3].as_int||1>
+  
+  - choose "<context.args.get[1]>":
+    - case "view":
+      - narrate format:Debug_Format "Listing errors <def[safeArg2]> to <def[safeArg3]>:"
+      - narrate format:Debug_Format "<yaml[logs].read[logs.unresolved].get[<def[safeArg2]>].to[<def[safeArg3]>].separated_by[<&nl>]>"
+       
+    - case "resolve":
+      - yaml id:logs logs.unresolved:<yaml[logs].read[logs.pending].exclude[<yaml[logs].read[logs.pending].get[<def[safeArg2]>].to[<def[safeArg3]>]>]>
+      - yaml id:logs logs.resolved:->:<yaml[logs].read[logs.pending].get[<def[safeArg2]>].to[<def[safeArg3]>]>
+      - narrate format:Debug_Format "Errors <def[safeArg2]> to <def[safeArg3]> has been resolved"
+       
+    - case "clear":
+      - yaml id:logs logs.unresolved:<yaml[logs].read[logs.unresolved].exclude[<yaml[logs].read[logs.unresolved].get[<def[safeArg2]>].to[<def[safeArg3]>]>]>
+      - narrate format:Debug_Format "Errors <def[safeArg2]> to <def[safeArg3]> has been cleared"
+       
+    - default:
+      - narrate format:Invalid_Argument ": <context.args.get[1]>"
+       
+###########################################################################
+# Command for toggling whether to recieve potential error messages or not #
+###########################################################################
+Debug_Error_Toggle:
+  type: command
+  debug: false
+  name: Debug_Recieve
+  usage: /Debug_Recieve <&lt>enable/disable<&gt>
+  description: Use this command to enable/disable receiving potential error messages
+  permission: denizen.debug.toggle
+  permission message: <&4>You do not have permission to use this command.<&r>
+  allowed help:
+  - determine <player.has_permission[<script.yaml_key[permission]>]>
+  tab complete:
+  - if <player.has_permission[<script.yaml_key[permission]>]> {
+    - determine <li@enable|disable.filter[starts_with[<context.args.last>]]>
+    }
+  script:
+  - if <context.args.size> != 1 {
+    - narrate format:Invalid_Number " "
+    - queue clear
+    }
+  - choose "<context.args.get[1]>":
+    - case "enable":
+      - flag <player> recieveReport
+      - narrate format:Debug_Format "You will now recieve error reports"
+    - case "disable":
+      - flag <player> recieveReport:!
+      - narrate format:Debug_Format "You will now not recieve error reports"
+    - default:
+      - narrate format:Invalid_Argument ": <context.args.get[1]>"
+      
+######################################################
+# Command for toggling the viewing of invisible NPCs #
+######################################################
+Debug_Visibility:
+  type: command
+  debug: false
+  name: Debug_Visibility
+  usage: /Debug_Visibility <&lt>Enable/Disable<&gt>
+  description: Use this command to toggle viewing invisible NPCs
+  permission: denizen.debug.visibility
+  permission message: <&4>You do not have the permission required to use this command.<&r>
+  allowed help:
+  - determine <player.has_permission[<script.yaml_key[permission]>]>
+  tab complete:
+  - if <player.has_permission[<script.yaml_key[permission]>]> {
+    - determine <li@enable|disable.filter[starts_with[<context.args.last>]]>
+    }
+  script:
+  - if <context.args.size> != 1 {
+    - narrate format:Invalid_Number " "
+    - queue clear
+    }
+  - choose "<context.args.get[1]>":
+    - case "enable":
+      - flag <player> debugVisibility
+      - foreach <server.list_npcs.filter[has_flag[hidden]]> {
+        - adjust <player> show_entity:<def[value]>
+        }
+      - narrate format:Debug_Format "Hidden NPCs are now visible"
+      
+    - case "disable":
+      - flag <player> debugVisibility:!
+      - foreach <server.list_npcs.filter[has_flag[hidden]]> {
+        - adjust <player> hide_entity:<def[value]>
+        }
+      - narrate format:Debug_Format "Visible NPCs are now hidden"
+      
+    - default:
+      - narrate format:Invalid_Argument ": <context.args.get[1]>"
+      - queue clear
+    
+#######################################
+# Command for all queues related shit #
+#######################################
+Queues_Command:
+  type: command
+  debug: false
+  name: Queues
+  description: Use this command for debugging queues.
+  usage: /Queues <&lt>All/Queue ID<&gt> <&lt>list/clear/stop<&lt>
+  aliases:
+  - Queue
+  permission: denizen.debug.queues
+  permission message: You do not have the permission required to use this command.
+  allowed help:
+  - determine <player.has_permission[<script.yaml_key[permission]>]||<context.server>>
+  tab complete:
+  - if <player.has_permission[<script.yaml_key[permission]>]||<context.server>> {
+    - determine <queue.list.parse.filter[starts_with[<context.args.last>]]>
+    }
+  script:
+  - if <context.args.size> != 2 {
+    - narrate format:Invalid_Number " "
+    - queue clear
+    }
+  - if <yaml[config].read[framework.options.log-events]> {
+    - log "<player.name||console> <player.uuid||<context.server>> used command: /queues <context.args.get[1]> <context.args.get[2]>" type:warning file:/plugins/dFramework/securitylog.log
+    }
+  - if <context.args.get[1]> != "all" && <queues.exists[<context.args.get[1]>].not> {
+    - narrate format:Invalid_Argument ": <context.args.get[1]>"
+    - queue clear
+    }
+  - choose "<context.args.get[2]>":
+    - case "list":
+      - narrate format:Debug_Format "Total number of queues: <queue.list.size><&nl> <&nl>This command's queue:<&nl><queue><&nl> <&nl>Queues:<queue.list.exclude[<queue>].comma_separated>"
+      
+    - case "clear":
+      - choose "<context.args.get[1]>":
+        - case "All":
+          - foreach <queue.list.exclude[<queue>]> {
+            - queue <def[value]> clear
+            } 
+          - if <queue.list.exclude[<queue>].is_empty> {
+            - narrate format:Debug_Format "Successfully cleared all queues!"
+            }
+            else {
+            - narrate format:Error_Format "Error: Certain queues could not be cleared! Try force stopping the scripts instead."
+            }
+            
+        - default:
+          - queue <context.args.get[1]> clear
+          - if <queue.exists[<context.args.get[1]]>]> {
+            - narrate format:Debug_Format "Specified queue could not be cleared! Try stopping the queue instead."
+            }
+            else {
+            - narrate format:Debug_Format "Successfully cleared queue: <context.args.get[1]]>"
+            }
+            
+    - case "stop":
+      - choose "<context.args.get[1]>":
+        - case "All":
+          - foreach <queue.list.exclude[<queue>]> {
+            - queue <def[value]> stop
+            }
+          - if <queue.list.exclude[<queue>].is_empty> {
+            - narrate format:Debug_Format "Successfully stopped all queues!"
+            }
+            else {
+            - narrate format:Error_Format "Error: Certain queues could not be stopped."
+            }
+            
+        - default:
+          - queue <context.args.get[1]> stop
+          - if <queue.exists[<context.args.get[1]>]> {
+            - narrate format:Debug_Format "Specified queue could not be stopped!"
+            }
+            else {
+            - narrate format:Debug_Format "Successfully stopped queue: <context.args.get[1]]>"
+            }
+            
+    - default:
+      - narrate format:Invalid_Argument ": <context.args.get[2]>"
